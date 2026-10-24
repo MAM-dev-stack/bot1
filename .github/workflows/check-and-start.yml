@@ -1,0 +1,26 @@
+name: Auto Start Server
+
+on:
+  workflow_dispatch: # فقط اجرای دستی از تب Actions
+
+jobs:
+  check-and-start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check server state
+        id: check
+        run: |
+          STATE=$(curl -s -H "Authorization: Bearer ${{ secrets.BH_API_KEY }}" \
+            "https://bot-hosting.net/api/v1/deployments/${{ secrets.BH_DEPLOY_ID }}" | jq -r '.state')
+          
+          echo "Current state: $STATE"
+          echo "state=$STATE" >> $GITHUB_OUTPUT
+
+      - name: Start if offline
+        if: steps.check.outputs.state == 'offline'
+        run: |
+          echo "Server is offline. Sending start command..."
+          curl -X POST -H "Authorization: Bearer ${{ secrets.BH_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"action":"start"}' \
+            "https://bot-hosting.net/api/v1/deployments/${{ secrets.BH_DEPLOY_ID }}/power"
